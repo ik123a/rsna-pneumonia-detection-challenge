@@ -127,6 +127,37 @@ def train(args):
     print(f"  Total parameters: {total_params:,}")
     print(f"  Trainable parameters: {trainable_params:,}")
 
+    # Check if we should resume training
+    resume_path = None
+    if getattr(args, 'resume', None):
+        if args.resume == 'auto' or args.resume.lower() == 'true':
+            # Check for latest or paused checkpoint
+            paused_path = os.path.join(config.CHECKPOINT_DIR, "paused_checkpoint.pth")
+            latest_path = os.path.join(config.CHECKPOINT_DIR, "latest_checkpoint.pth")
+            if os.path.exists(paused_path):
+                resume_path = paused_path
+            elif os.path.exists(latest_path):
+                resume_path = latest_path
+            else:
+                # Check for checkpoint_epoch_X.pth files
+                import glob
+                ckpt_files = glob.glob(os.path.join(config.CHECKPOINT_DIR, "checkpoint_epoch_*.pth"))
+                if ckpt_files:
+                    def get_epoch_num(path):
+                        try:
+                            return int(os.path.basename(path).split('_')[-1].split('.')[0])
+                        except Exception:
+                            return -1
+                    resume_path = max(ckpt_files, key=get_epoch_num)
+        else:
+            resume_path = args.resume
+
+        if resume_path and os.path.exists(resume_path):
+            print(f"Resuming training from checkpoint: {resume_path}")
+        else:
+            print(f"No checkpoint found to resume training from. Starting training from scratch.")
+            resume_path = None
+
     # Train
     print("\n[3/4] Training...")
     history = train_model(
@@ -144,7 +175,8 @@ def train(args):
         early_stopping_patience=args.early_stopping_patience,
         use_early_stopping=args.early_stopping,
         use_amp=config.USE_AMP,
-        grad_accum_steps=args.grad_accum_steps
+        grad_accum_steps=args.grad_accum_steps,
+        resume_from=resume_path
     )
 
     # Save history
@@ -471,6 +503,8 @@ def main():
                         help='Early stopping patience')
     parser.add_argument('--checkpoint', type=str, default=config.MODEL_SAVE_PATH,
                         help='Checkpoint path for evaluation/visualization')
+    parser.add_argument('--resume', type=str, default=None,
+                        help='Path to checkpoint to resume training from. Use "auto" to automatically find the latest checkpoint.')
     parser.add_argument('--num_viz', type=int, default=8,
                         help='Number of samples to visualize')
     parser.add_argument('--grad_accum_steps', type=int, default=1,

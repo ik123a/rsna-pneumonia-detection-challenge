@@ -209,7 +209,7 @@ def evaluate_loss(model, data_loader, device, use_amp=True, non_blocking=True):
         targets = [{k: v.to(device, non_blocking=non_blocking) for k, v in t.items()} for t in targets]
 
         if use_amp and torch.cuda.is_available():
-            with autocast(device_type='cuda'):
+            with autocast():
                 loss_dict = model(images, targets)
                 losses = sum(loss for loss in loss_dict.values())
         else:
@@ -229,8 +229,9 @@ def train_model(model, train_loader, val_loader, device,
                 optimizer_type='adamw', scheduler_type='plateau',
                 checkpoint_dir='output/checkpoints', model_save_path='output/best_model.pth',
                 early_stopping_patience=5, use_early_stopping=True,
-                use_amp=True, grad_accum_steps=1):
+                use_amp=True, grad_accum_steps=1, resume_from=None):
     """Full training loop with checkpointing, early stopping, and GPU optimizations.
+       Supports resuming from checkpoint and gracefully handling pause commands.
 
     Args:
         model: Detection model.
@@ -248,6 +249,7 @@ def train_model(model, train_loader, val_loader, device,
         use_early_stopping: Whether to use early stopping.
         use_amp: Enable Automatic Mixed Precision training.
         grad_accum_steps: Gradient accumulation steps.
+        resume_from: Path to checkpoint to resume training from.
 
     Returns:
         Dictionary with training history.
@@ -266,8 +268,49 @@ def train_model(model, train_loader, val_loader, device,
         'epoch_times': [],
     }
 
+    start_epoch = 1
     best_val_loss = float('inf')
     patience_counter = 0
+
+    # Resume if requested
+    if resume_from and os.path.exists(resume_from):
+        print(f"\n[Resume] Loading checkpoint state from: {resume_from}")
+        checkpoint = torch.load(resume_from, map_location=device)
+        
+        # Load weights to base model (unwrapped from DataParallel if wrapped)
+        base_model = model.module if hasattr(model, 'module') else model
+        base_model.load_state_dict(checkpoint['model_state_dict'])
+        
+        # Load optimizer state
+        if 'optimizer_state_dict' in checkpoint and optimizer is not None:
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            
+        start_epoch = checkpoint['epoch'] + 1
+        best_val_loss = checkpoint.get('val_loss', float('inf'))
+        
+        # Restore training history if saved in checkpoint
+        if 'history' in checkpoint:
+            history = checkpoint['history']
+            print(f"[Resume] Restored training history. Best val loss so far: {best_val_loss:.4f}")
+        else:
+            # Fallback: try loading from existing history.json
+            history_json_path = os.path.join(os.path.dirname(model_save_path), 'history.json')
+            if os.path.exists(history_json_path):
+                try:
+                    import json
+                    with open(history_json_path, 'r') as f:
+                        saved_history = json.load(f)
+                        for k in history.keys():
+                            if k in saved_history:
+                                history[k] = saved_history[k]
+                    print("[Resume] Restored training history from history.json.")
+                except Exception as e:
+                    print(f"Could not load history.json: {e}")
+                    
+        print(f"[Resume] Successfully loaded checkpoint! Resuming training from Epoch {start_epoch}")
+        if start_epoch > num_epochs:
+            print(f"[Resume] Warning: start_epoch ({start_epoch}) is greater than requested num_epochs ({num_epochs}). Training complete.")
+            return history
 
     # GPU info
     gpu_info = ""
@@ -285,7 +328,7 @@ def train_model(model, train_loader, val_loader, device,
 
     print(f"\n{'='*70}")
     print(f"Training Configuration:")
-    print(f"  Epochs: {num_epochs}")
+    print(f"  Start Epoch: {start_epoch} | Target Epochs: {num_epochs}")
     print(f"  LR: {lr}, Weight Decay: {weight_decay}")
     print(f"  Optimizer: {optimizer_type}")
     print(f"  Scheduler: {scheduler_type}")
@@ -293,78 +336,130 @@ def train_model(model, train_loader, val_loader, device,
     print(f"  Effective Batch Size: {train_loader.batch_size * grad_accum_steps}")
     print(f"{'='*70}\n")
 
-    for epoch in range(1, num_epochs + 1):
-        epoch_start = time.time()
+    try:
+        for epoch in range(start_epoch, num_epochs + 1):
+            epoch_start = time.time()
 
-        # Clear cache before epoch (helpful for GPU memory management)
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+            # Clear cache before epoch (helpful for GPU memory management)
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
-        # Train
-        train_loss = train_one_epoch(
-            model, train_loader, optimizer, device, epoch,
-            clip_grad=1.0, use_amp=use_amp, grad_accum_steps=grad_accum_steps
-        )
+            # Train
+            train_loss = train_one_epoch(
+                model, train_loader, optimizer, device, epoch,
+                clip_grad=1.0, use_amp=use_amp, grad_accum_steps=grad_accum_steps
+            )
 
-        # Validate
-        val_loss = evaluate_loss(model, val_loader, device, use_amp=use_amp)
+            # Validate
+            val_loss = evaluate_loss(model, val_loader, device, use_amp=use_amp)
 
-        # Learning rate
-        current_lr = optimizer.param_groups[0]['lr']
+            # Learning rate
+            current_lr = optimizer.param_groups[0]['lr']
 
-        # Scheduler step
-        if scheduler_type == 'plateau':
-            scheduler.step(val_loss)
-        elif scheduler_type == 'step':
-            scheduler.step()
+            # Scheduler step
+            if scheduler_type == 'plateau':
+                scheduler.step(val_loss)
+            elif scheduler_type == 'step':
+                scheduler.step()
 
-        epoch_time = time.time() - epoch_start
-        history['epoch_times'].append(epoch_time)
+            epoch_time = time.time() - epoch_start
+            history['epoch_times'].append(epoch_time)
 
-        # Record
-        history['train_loss'].append(train_loss)
-        history['val_loss'].append(val_loss)
-        history['learning_rate'].append(current_lr)
+            # Record
+            history['train_loss'].append(train_loss)
+            history['val_loss'].append(val_loss)
+            history['learning_rate'].append(current_lr)
 
-        # GPU memory summary
-        mem_summary = get_gpu_memory_info() if torch.cuda.is_available() else "CPU"
+            # GPU memory summary
+            mem_summary = get_gpu_memory_info() if torch.cuda.is_available() else "CPU"
 
-        print(f"\nEpoch {epoch}/{num_epochs} | Time: {epoch_time:.1f}s | {mem_summary}")
-        print(f"  Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | LR: {current_lr:.2e}")
+            print(f"\nEpoch {epoch}/{num_epochs} | Time: {epoch_time:.1f}s | {mem_summary}")
+            print(f"  Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | LR: {current_lr:.2e}")
 
-        # Save best model (handle DataParallel wrapper)
-        model_to_save = model.module if hasattr(model, 'module') else model
+            # Save best model (handle DataParallel wrapper)
+            model_to_save = model.module if hasattr(model, 'module') else model
 
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            history['best_epoch'] = epoch
-            history['best_val_loss'] = best_val_loss
-            torch.save({
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                history['best_epoch'] = epoch
+                history['best_val_loss'] = best_val_loss
+                torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': model_to_save.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'val_loss': val_loss,
+                    'train_loss': train_loss,
+                    'history': history,
+                }, model_save_path)
+                print(f"  -> Saved best model (val_loss: {val_loss:.4f})")
+                patience_counter = 0
+            else:
+                patience_counter += 1
+
+            # Checkpoint every epoch
+            checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pth")
+            state_dict = {
                 'epoch': epoch,
                 'model_state_dict': model_to_save.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'val_loss': val_loss,
                 'train_loss': train_loss,
-            }, model_save_path)
-            print(f"  -> Saved best model (val_loss: {val_loss:.4f})")
-            patience_counter = 0
-        else:
-            patience_counter += 1
+                'history': history
+            }
+            torch.save(state_dict, checkpoint_path)
+            
+            # Keep a fixed "latest_checkpoint.pth" path updated for seamless resumes
+            latest_checkpoint_path = os.path.join(checkpoint_dir, "latest_checkpoint.pth")
+            torch.save(state_dict, latest_checkpoint_path)
+            print(f"  -> Checkpoints updated: {checkpoint_path} & {latest_checkpoint_path}")
 
-        # Checkpoint every epoch
-        checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pth")
-        torch.save({
-            'epoch': epoch,
+            # Early stopping
+            if use_early_stopping and patience_counter >= early_stopping_patience:
+                print(f"\nEarly stopping triggered after {early_stopping_patience} epochs without improvement")
+                break
+
+    except KeyboardInterrupt:
+        print("\n" + "!"*70)
+        print("TRAINING PAUSED BY USER (Ctrl+C / Interrupted)")
+        print("Saving current progress automatically before exiting...")
+        
+        # Save a dedicated pause checkpoint
+        paused_checkpoint_path = os.path.join(checkpoint_dir, "paused_checkpoint.pth")
+        model_to_save = model.module if hasattr(model, 'module') else model
+        
+        # Determine last successfully completed epoch
+        completed_epoch = epoch - 1 if 'epoch' in locals() else start_epoch - 1
+        
+        pause_state = {
+            'epoch': completed_epoch,
             'model_state_dict': model_to_save.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'val_loss': val_loss,
-            'train_loss': train_loss,
-        }, checkpoint_path)
-
-        # Early stopping
-        if use_early_stopping and patience_counter >= early_stopping_patience:
-            print(f"\nEarly stopping triggered after {early_stopping_patience} epochs without improvement")
-            break
+            'val_loss': history['val_loss'][-1] if history['val_loss'] else float('inf'),
+            'train_loss': history['train_loss'][-1] if history['train_loss'] else float('inf'),
+            'history': history
+        }
+        torch.save(pause_state, paused_checkpoint_path)
+        
+        # Copy to latest_checkpoint.pth as well
+        latest_checkpoint_path = os.path.join(checkpoint_dir, "latest_checkpoint.pth")
+        torch.save(pause_state, latest_checkpoint_path)
+        
+        # Save temporary history file
+        try:
+            import json
+            output_dir = os.path.dirname(model_save_path)
+            os.makedirs(output_dir, exist_ok=True)
+            with open(os.path.join(output_dir, 'history.json'), 'w') as f:
+                json.dump({k: v for k, v in history.items() if k not in ['ious', 'precisions', 'recalls']}, f, indent=2)
+        except Exception as e:
+            print(f"Could not save partial history.json: {e}")
+            
+        print(f"Progress saved successfully! You can resume from: {paused_checkpoint_path}")
+        print("To resume training, simply run with the '--resume' flag.")
+        print("!"*70 + "\n")
+        
+        import sys
+        sys.exit(0)
 
     # Final memory cleanup
     if torch.cuda.is_available():

@@ -202,7 +202,7 @@ def evaluate_model(model, data_loader, device, iou_threshold=0.5, score_threshol
 
         # Get predictions with optional AMP
         if use_amp and torch.cuda.is_available():
-            with autocast(device_type='cuda'):
+            with autocast():
                 outputs = model(images)
         else:
             outputs = model(images)
@@ -252,13 +252,20 @@ def evaluate_model(model, data_loader, device, iou_threshold=0.5, score_threshol
         return {
             'mAP': 0.0,
             'AP@0.5': 0.0,
+            'AP_coco': 0.0,
             'mean_iou': 0.0,
             'median_iou': 0.0,
+            'min_iou': 0.0,
+            'max_iou': 0.0,
             'num_predictions': 0,
             'num_gt': num_gt_total,
+            'num_matched': 0,
             'precision': 0.0,
             'recall': 0.0,
             'f1': 0.0,
+            'ious': [],
+            'precisions': [],
+            'recalls': [],
         }
 
     # Sort all results by score descending
