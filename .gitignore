@@ -1,0 +1,44 @@
+# Virtual environments and package managers
+env_gpu/
+.conda/
+venv/
+.venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# Python compiler caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Large executables and installers
+*.exe
+miniconda.exe
+micromamba.exe
+python-installer.exe
+
+# RSNA Challenge Datasets (Too large for GitHub)
+stage_2_train_images/
+stage_2_test_images/
+stage_2_train_labels.csv
+stage_2_detailed_class_info.csv
+stage_2_sample_submission.csv
+
+# Large model weights and checkpoints
+output/
+checkpoints/
+baseline_checkpoints/
+*.pth
+*.pt
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
