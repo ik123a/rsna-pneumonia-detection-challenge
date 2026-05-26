@@ -4,20 +4,20 @@ import re
 
 def main():
     print("======================================================================")
-    print(" ⚡ RSNA Pneumonia Detection - Active Training Progress Monitor")
+    print("      RSNA Pneumonia Detection - Active Training Progress Monitor     ")
     print("======================================================================\n")
     
     # Path to the task log directory in App Data
     tasks_dir = r"C:\Users\SKV\.gemini\antigravity\brain\68baf366-3618-40e5-acaf-afe64f0a885e\.system_generated\tasks"
     
     if not os.path.exists(tasks_dir):
-        print("❌ Error: Could not locate active task log directory.")
+        print("[Error] Could not locate active task log directory.")
         return
         
     # Get all log files in the tasks directory
     log_files = glob.glob(os.path.join(tasks_dir, "*.log"))
     if not log_files:
-        print("❌ No active training logs found.")
+        print("[Error] No active training logs found.")
         return
         
     # Find the active log file (the one containing the RSNA training config)
@@ -33,7 +33,7 @@ def main():
             continue
             
     if not active_log:
-        print("ℹ️ No active RSNA training session log found. Training might be inactive.")
+        print("[Info] No active RSNA training session log found. Training might be inactive.")
         return
         
     # Read the active log
@@ -42,7 +42,7 @@ def main():
             lines = f.readlines()
             
         if not lines:
-            print("⏳ Training log is empty. Starting up...")
+            print("[Wait] Training log is empty. Starting up...")
             return
             
         # Parse total epochs configuration
@@ -73,7 +73,7 @@ def main():
             clean_line = re.sub(r'\x1b\[[0-9;]*[mK]', '', progress_line)
             clean_line = clean_line.replace('\r', '').strip()
             
-            print("🟢 Current Training Status:")
+            print("[Active Training Status]")
             print("-" * 80)
             print(clean_line)
             print("-" * 80)
@@ -96,7 +96,7 @@ def main():
                     gpu_mem = clean_line.split("gpu=")[-1].split("]")[0]
                     stats += f"  - GPU Memory: {gpu_mem}\n"
                 
-                print(f"📊 Progress Analytics:")
+                print(f"[Progress Analytics]")
                 print(f"  - Active Epoch: {epoch} of {epochs_target}")
                 print(f"  - Current Epoch Completion: {percent}%")
                 print(f"  - Total Pipeline Progress: {total_progress:.2f}% completed")
@@ -112,13 +112,13 @@ def main():
                             completed_epoch = int(completed_match.group(1))
                             break
                 if completed_epoch > 0:
-                    print(f"📊 Completed Epochs: {completed_epoch} of {epochs_target}")
+                    print(f"[Completed Epochs] {completed_epoch} of {epochs_target}")
                     print(f"  - Total Pipeline Progress: {(completed_epoch / epochs_target) * 100:.2f}% completed")
         else:
-            print("⏳ Initializing GPU training run. Please check back in a few seconds...")
+            print("[Wait] Initializing GPU training run. Please check back in a few seconds...")
             
     except Exception as e:
-        print(f"❌ Error reading active log: {e}")
+        print(f"[Error] Error reading active log: {e}")
 
 if __name__ == '__main__':
     main()
