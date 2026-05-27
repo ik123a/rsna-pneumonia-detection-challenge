@@ -7,17 +7,19 @@ def main():
     print("      RSNA Pneumonia Detection - Active Training Progress Monitor     ")
     print("======================================================================\n")
     
-    # Path to the task log directory in App Data
-    tasks_dir = r"C:\Users\SKV\.gemini\antigravity\brain\68baf366-3618-40e5-acaf-afe64f0a885e\.system_generated\tasks"
+    # Path to the parent brain directory in App Data
+    parent_dir = r"C:\Users\SKV\.gemini\antigravity\brain"
     
-    if not os.path.exists(tasks_dir):
-        print("[Error] Could not locate active task log directory.")
-        return
-        
-    # Get all log files in the tasks directory
-    log_files = glob.glob(os.path.join(tasks_dir, "*.log"))
+    # Get all log files across all conversation task directories dynamically
+    log_files = glob.glob(os.path.join(parent_dir, "*", ".system_generated", "tasks", "*.log"))
     if not log_files:
-        print("[Error] No active training logs found.")
+        # Fallback to checking the old exact tasks_dir if glob patterns have issues
+        old_tasks_dir = r"C:\Users\SKV\.gemini\antigravity\brain\68baf366-3618-40e5-acaf-afe64f0a885e\.system_generated\tasks"
+        if os.path.exists(old_tasks_dir):
+            log_files = glob.glob(os.path.join(old_tasks_dir, "*.log"))
+            
+    if not log_files:
+        print("[Error] No active training logs found. Please start a training run first.")
         return
         
     # Find the active log file (the one containing the RSNA training config)
