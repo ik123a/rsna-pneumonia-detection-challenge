@@ -28,7 +28,9 @@ stage_2_detailed_class_info.csv
 stage_2_sample_submission.csv
 
 # Large model weights and checkpoints
-output/
+output/**/*.pth
+output/**/*.pt
+output/checkpoints/
 checkpoints/
 baseline_checkpoints/
 *.pth
