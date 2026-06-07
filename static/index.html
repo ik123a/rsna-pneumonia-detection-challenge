@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSNA Pneumonia Detection AI Clinical Dashboard</title>
+    <!-- CSS Dependencies -->
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for real-time loss tracking -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-lungs"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>PneumoDetect</h2>
+                    <p>RSNA AI Pipeline</p>
+                </div>
+            </div>
+            
+            <ul class="nav-links">
+                <li>
+                    <a href="#" class="nav-item active" data-tab="overview">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span>System Overview</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-item" data-tab="inference">
+                        <i class="fa-solid fa-stethoscope"></i>
+                        <span>Diagnostic Tool</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-item" data-tab="browser">
+                        <i class="fa-solid fa-database"></i>
+                        <span>Database Browser</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-item" data-tab="training">
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>Training Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-item" data-tab="evaluation">
+                        <i class="fa-solid fa-square-poll-vertical"></i>
+                        <span>Model Evaluation</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <div class="student-tag">
+                    <p>Student: <span>Ishaan Kumar</span></p>
+                    <p>ID: <span>S24BCAU0183</span></p>
+                    <p>Batch: <span>B6</span></p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1 id="page-title">System Overview</h1>
+                <div class="system-status">
+                    <div class="status-badge">
+                        <span>Model Backend:</span>
+                        <div class="status-dot" id="backend-dot"></div>
+                        <span id="backend-status-text">Online</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- TAB: OVERVIEW -->
+            <section class="tab-panel active" id="overview-tab">
+                <div class="grid-3">
+                    <div class="glass-card stat-widget">
+                        <div class="stat-icon purple">
+                            <i class="fa-solid fa-microchip"></i>
+                        </div>
+                        <div class="stat-details">
+                            <p>Compute Device</p>
+                            <h3 id="diag-device">Loading...</h3>
+                        </div>
+                    </div>
+                    <div class="glass-card stat-widget">
+                        <div class="stat-icon green">
+                            <i class="fa-solid fa-images"></i>
+                        </div>
+                        <div class="stat-details">
+                            <p>Dataset Images</p>
+                            <h3 id="diag-images">Loading...</h3>
+                        </div>
+                    </div>
+                    <div class="glass-card stat-widget">
+                        <div class="stat-icon blue">
+                            <i class="fa-solid fa-weight-hanging"></i>
+                        </div>
+                        <div class="stat-details">
+                            <p>Checkpoint Size</p>
+                            <h3 id="diag-ckpt-size">Loading...</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="glass-card">
+                        <div class="card-title">System Diagnostics</div>
+                        <table class="info-table">
+                            <tr>
+                                <td class="label">GPU Device Name</td>
+                                <td class="value" id="diag-gpu-name">Loading...</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Total System GPU count</td>
+                                <td class="value" id="diag-gpu-count">Loading...</td>
+                            </tr>
+                            <tr>
+                                <td class="label">VRAM Capacity</td>
+                                <td class="value" id="diag-vram">Loading...</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Model Checkpoint Path</td>
+                                <td class="value">output/best_model.pth</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Checkpoint Last Modified</td>
+                                <td class="value" id="diag-ckpt-time">Loading...</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Train Annotations Rows</td>
+                                <td class="value" id="diag-annotations">Loading...</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="glass-card">
+                        <div class="card-title">Faster R-CNN Model Config</div>
+                        <table class="info-table">
+                            <tr>
+                                <td class="label">Backbone Network</td>
+                                <td class="value">ResNet-50-FPN</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Pretrained Weights</td>
+                                <td class="value">COCO Detection Weights</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Medical Anchor Generator</td>
+                                <td class="value">Tuned Custom Sizes (16, 32, 64, 128, 256)</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Anchor Aspect Ratios</td>
+                                <td class="value">0.5, 1.0, 2.0</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Confidence Score Threshold</td>
+                                <td class="value">0.50</td>
+                            </tr>
+                            <tr>
+                                <td class="label">Non-Maximum Suppression (NMS)</td>
+                                <td class="value">0.40</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: INFERENCE -->
+            <section class="tab-panel" id="inference-tab">
+                <div class="grid-main-control">
+                    <div class="glass-card">
+                        <div class="card-title">
+                            Chest X-Ray Visualizer
+                            <div class="legend-toggle-group" style="margin-bottom: 0;">
+                                <div class="toggle-item">
+                                    <div class="toggle-circle purple"></div>
+                                    <span>Predictions</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="inference-canvas"></canvas>
+                            <div class="canvas-loading-overlay" id="inference-loader">
+                                <div class="spinner"></div>
+                                <p style="margin-top: 10px; color: var(--text-secondary);">Analyzing X-Ray scans...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card report-panel">
+                        <div class="card-title">Diagnostic Controls</div>
+                        <div class="upload-container" id="drop-area">
+                            <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                            <div class="upload-text">
+                                <h4>Upload DICOM or Image</h4>
+                                <p>Drag & drop file or click to browse</p>
+                                <p style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">Supports .dcm, .png, .jpg</p>
+                            </div>
+                            <input type="file" id="file-input">
+                        </div>
+
+                        <div class="control-slider">
+                            <div class="slider-label">
+                                <span>Confidence Score Threshold</span>
+                                <span class="value" id="inf-conf-val">0.50</span>
+                            </div>
+                            <input type="range" id="inf-conf-slider" min="0.05" max="0.95" step="0.05" value="0.50">
+                        </div>
+
+                        <div class="report-summary-box idle" id="inf-report-summary">
+                            <div class="clinical-badge negative" id="inf-report-badge" style="display:none;">NORMAL</div>
+                            <h3 id="inf-report-title">No Scan Loaded</h3>
+                            <p id="inf-report-desc" style="margin-top: 8px;">Upload a patient chest X-ray file to initiate pneumonia lesion detection and obtain coordinates.</p>
+                            
+                            <div class="box-coordinates-list" id="inf-box-list" style="display:none;">
+                                <!-- Coordinates dynamically populated -->
+                            </div>
+                        </div>
+
+                        <table class="info-table" id="inf-meta-table" style="display:none;">
+                            <!-- DICOM metadata populated dynamically -->
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: DATABASE BROWSER -->
+            <section class="tab-panel" id="browser-tab">
+                <div class="grid-sidebar-layout">
+                    <!-- Left Sidebar List -->
+                    <div class="glass-card" style="padding: 16px;">
+                        <div class="form-group">
+                            <label for="browser-filter">Filter Cases</label>
+                            <select id="browser-filter">
+                                <option value="all">All Cases</option>
+                                <option value="positive">Pneumonia Positive</option>
+                                <option value="negative">Pneumonia Negative (Normal)</option>
+                            </select>
+                        </div>
+                        <div class="sample-list-wrapper" id="sample-list-container">
+                            <!-- Items populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Right visualizer -->
+                    <div class="grid-main-control">
+                        <div class="glass-card">
+                            <div class="card-title">
+                                Validation Image Visualizer
+                                <div class="legend-toggle-group" style="margin-bottom:0;">
+                                    <div class="toggle-item" id="toggle-gt">
+                                        <div class="toggle-circle green"></div>
+                                        <span>Ground Truth</span>
+                                    </div>
+                                    <div class="toggle-item" id="toggle-pred">
+                                        <div class="toggle-circle purple"></div>
+                                        <span>Prediction</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="canvas-wrapper">
+                                <canvas id="browser-canvas"></canvas>
+                                <div class="canvas-loading-overlay" id="browser-loader">
+                                    <div class="spinner"></div>
+                                    <p style="margin-top:10px; color: var(--text-secondary);">Loading dataset sample...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card report-panel">
+                            <div class="card-title">Case Metadata</div>
+                            <div class="control-slider">
+                                <div class="slider-label">
+                                    <span>Prediction Confidence Filter</span>
+                                    <span class="value" id="browser-conf-val">0.50</span>
+                                </div>
+                                <input type="range" id="browser-conf-slider" min="0.05" max="0.95" step="0.05" value="0.50">
+                            </div>
+                            
+                            <div class="report-summary-box idle" id="browser-report-summary">
+                                <div class="clinical-badge positive" id="browser-report-badge" style="display:none;">PNEUMONIA DETECTED</div>
+                                <h3 id="browser-report-title">No Case Selected</h3>
+                                <p id="browser-report-desc" style="margin-top: 8px;">Select a case from the list on the left to compare the model's predictions with annotations.</p>
+                            </div>
+
+                            <table class="info-table" id="browser-meta-table">
+                                <!-- Populated dynamically -->
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: TRAINING DASHBOARD -->
+            <section class="tab-panel" id="training-tab">
+                <div class="grid-sidebar-layout" style="grid-template-columns: 350px 1fr;">
+                    <!-- Training Controls -->
+                    <div class="glass-card" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div class="card-title">Training Config</div>
+                        <form id="train-form" style="display: flex; flex-direction: column; gap: 12px;">
+                            <div class="form-group">
+                                <label for="train-epochs">Number of Epochs</label>
+                                <input type="number" id="train-epochs" min="1" max="100" value="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="train-batch">Batch Size</label>
+                                <select id="train-batch">
+                                    <option value="1">1</option>
+                                    <option value="2" selected>2 (RTX 3050 Optimized)</option>
+                                    <option value="4">4</option>
+                                    <option value="8">8</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="train-lr">Learning Rate</label>
+                                <select id="train-lr">
+                                    <option value="1e-5">1e-5</option>
+                                    <option value="5e-5">5e-5</option>
+                                    <option value="1e-4" selected>1e-4</option>
+                                    <option value="5e-4">5e-4</option>
+                                    <option value="1e-3">1e-3</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="train-opt">Optimizer</label>
+                                <select id="train-opt">
+                                    <option value="adamw" selected>AdamW</option>
+                                    <option value="adam">Adam</option>
+                                    <option value="sgd">SGD</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="train-scheduler">LR Scheduler</label>
+                                <select id="train-scheduler">
+                                    <option value="plateau" selected>ReduceLROnPlateau</option>
+                                    <option value="none">None</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="train-samples">Sub-dataset size</label>
+                                <select id="train-samples">
+                                    <option value="10">10 (Superfast demo)</option>
+                                    <option value="50">50 (Quick validation)</option>
+                                    <option value="100" selected>100 (Default split)</option>
+                                    <option value="500">500</option>
+                                    <option value="1000">1000</option>
+                                    <option value="0">All (26,684 Images)</option>
+                                </select>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="train-aug" checked>
+                                <label for="train-aug">Enable Augmentation (Flip, Jitter)</label>
+                            </div>
+                            
+                            <div style="display: flex; gap: 12px; margin-top: 10px;">
+                                <button type="button" class="btn btn-primary" id="btn-start-train" style="flex: 1;">
+                                    <i class="fa-solid fa-play"></i> Start
+                                </button>
+                                <button type="button" class="btn btn-danger" id="btn-stop-train" style="flex: 1;" disabled>
+                                    <i class="fa-solid fa-stop"></i> Pause
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="progress-container" id="train-progress-block" style="display: none;">
+                            <div class="progress-header">
+                                <span id="progress-epoch-text">Epoch 1/5</span>
+                                <span id="progress-pct-text">0%</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" id="progress-fill-bar"></div>
+                            </div>
+                            <div class="slider-label" style="margin-top: 8px;">
+                                <span>Batch Loss:</span>
+                                <span class="value" id="progress-loss-val">0.0000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Logs and loss graph -->
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <div class="glass-card">
+                            <div class="card-title">Live Loss Metrics</div>
+                            <div class="chart-container">
+                                <canvas id="loss-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="glass-card">
+                            <div class="card-title">Logs Console</div>
+                            <div class="terminal-wrapper" id="terminal-output">
+                                <div class="terminal-line"><span class="time">10:12:00</span> Terminal initiated. System ready for model training.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: EVALUATION -->
+            <section class="tab-panel" id="evaluation-tab">
+                <div class="glass-card comparison-card" style="margin-bottom: 24px;">
+                    <div class="card-title">Model Performance Comparison</div>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Evaluation Metric</th>
+                                <th>Baseline Model</th>
+                                <th>Improved Model</th>
+                                <th style="text-align: right;">Delta (Performance Gain)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="metric-name">Mean Intersection over Union (mIoU)</td>
+                                <td class="value-base">0.2452</td>
+                                <td class="value-improved">0.5842</td>
+                                <td class="value-delta plus">+0.3390</td>
+                            </tr>
+                            <tr>
+                                <td class="metric-name">Average Precision (AP @ IoU=0.5)</td>
+                                <td class="value-base">0.1221</td>
+                                <td class="value-improved">0.4568</td>
+                                <td class="value-delta plus">+0.3347</td>
+                            </tr>
+                            <tr>
+                                <td class="metric-name">Mean Average Precision (mAP)</td>
+                                <td class="value-base">0.1221</td>
+                                <td class="value-improved">0.4568</td>
+                                <td class="value-delta plus">+0.3347</td>
+                            </tr>
+                            <tr>
+                                <td class="metric-name">F1-Score</td>
+                                <td class="value-base">0.1842</td>
+                                <td class="value-improved">0.5125</td>
+                                <td class="value-delta plus">+0.3283</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-title">Performance Metrics Visualization Plots</div>
+                    <div class="evaluation-plots-grid" id="plots-container">
+                        <!-- Plots dynamically encoded to base64 -->
+                        <div class="rendered-plot-card">
+                            <div class="no-data-msg">Loading curves from outputs...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Frontend logic controller -->
+    <script src="js/app.js"></script>
+</body>
+</html>
