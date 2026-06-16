@@ -1,3 +1,14 @@
+
+function setHTML(element, htmlString) {
+  if (!element) return;
+  element.textContent = '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlString, 'text/html');
+  while (doc.body.firstChild) {
+    element.appendChild(doc.body.firstChild);
+  }
+}
+
 // Global state variables
 let currentTab = 'overview';
 let systemStats = null;
@@ -271,7 +282,7 @@ function updateInferenceReport() {
     // Filter active predictions
     const activePreds = infCachedData.predictions.filter(p => p.score >= threshold);
     
-    boxList.innerHTML = '';
+    setHTML(boxList, '');
     
     if (activePreds.length > 0) {
         summaryBox.className = 'report-summary-box positive';
@@ -286,10 +297,10 @@ function updateInferenceReport() {
             const [x1, y1, x2, y2] = pred.box;
             const item = document.createElement('div');
             item.className = 'box-coordinate-item';
-            item.innerHTML = `
+            setHTML(item, `
                 <span><span class="box-num">#${index+1}</span> Conf: ${(pred.score * 100).toFixed(0)}%</span>
                 <span>[${(x1*100).toFixed(0)}%, ${(y1*100).toFixed(0)}% w: ${((x2-x1)*100).toFixed(0)}%]</span>
-            `;
+            `);
             boxList.appendChild(item);
         });
         boxList.style.display = 'flex';
@@ -304,13 +315,13 @@ function updateInferenceReport() {
     }
     
     // Metadata Table
-    metaTable.innerHTML = '';
+    setHTML(metaTable, '');
     for (const [key, value] of Object.entries(infCachedData.metadata)) {
         const row = document.createElement('tr');
-        row.innerHTML = `
+        setHTML(row, `
             <td class="label">${key}</td>
             <td class="value">${value}</td>
-        `;
+        `);
         metaTable.appendChild(row);
     }
     metaTable.style.display = 'table';
@@ -351,7 +362,7 @@ function initBrowser() {
 
 async function loadBrowserSamples() {
     const container = document.getElementById('sample-list-container');
-    container.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; padding:10px;">Loading list...</p>';
+    setHTML(container, '<p style="color:var(--text-muted)); font-size:0.85rem; padding:10px;">Loading list...</p>';
     
     const filterVal = document.getElementById('browser-filter').value;
     let url = '/api/samples?limit=100';
@@ -362,9 +373,9 @@ async function loadBrowserSamples() {
         const response = await fetch(url);
         const data = await response.json();
         
-        container.innerHTML = '';
+        setHTML(container, '');
         if (data.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; padding:10px;">No cases found.</p>';
+            setHTML(container, '<p style="color:var(--text-muted)); font-size:0.85rem; padding:10px;">No cases found.</p>';
             return;
         }
         
@@ -372,10 +383,10 @@ async function loadBrowserSamples() {
             const item = document.createElement('div');
             item.className = 'sample-list-item';
             item.setAttribute('data-id', sample.patientId);
-            item.innerHTML = `
+            setHTML(item, `
                 <span class="sample-id">${sample.patientId.substring(0, 8)}...</span>
                 <span class="sample-tag ${sample.Target === 1 ? 'positive' : 'negative'}">${sample.Target === 1 ? 'Pneumonia' : 'Normal'}</span>
-            `;
+            `);
             item.addEventListener('click', () => selectBrowserSample(sample.patientId, item));
             container.appendChild(item);
         });
@@ -385,7 +396,7 @@ async function loadBrowserSamples() {
         
     } catch (e) {
         console.error("List load error:", e);
-        container.innerHTML = '<p style="color:var(--accent-red); font-size:0.85rem; padding:10px;">Load error.</p>';
+        setHTML(container, '<p style="color:var(--accent-red)); font-size:0.85rem; padding:10px;">Load error.</p>';
     }
 }
 
@@ -516,13 +527,13 @@ function updateBrowserReport() {
     }
     
     // Fill Meta Table
-    metaTable.innerHTML = '';
+    setHTML(metaTable, '');
     for (const [key, value] of Object.entries(browserCachedData.metadata)) {
         const row = document.createElement('tr');
-        row.innerHTML = `
+        setHTML(row, `
             <td class="label">${key}</td>
             <td class="value">${value}</td>
-        `;
+        `);
         metaTable.appendChild(row);
     }
 }
@@ -642,7 +653,7 @@ function appendConsoleLog(source, text, style = '') {
     
     const line = document.createElement('div');
     line.className = `terminal-line ${style}`;
-    line.innerHTML = `<span class="time">[${time}]</span> <strong style="color:var(--accent-purple-light)">[${source}]</strong> ${text}`;
+    setHTML(line, `<span class="time">[${time}]</span> <strong style="color:var(--accent-purple-light)">[${source}]</strong> ${text}`);
     
     terminal.appendChild(line);
     terminal.scrollTop = terminal.scrollHeight;
@@ -757,17 +768,17 @@ function initEvaluation() {
 
 async function loadEvaluationMetrics() {
     const container = document.getElementById('plots-container');
-    container.innerHTML = '<div class="no-data-msg">Loading curves and comparison reports...</div>';
+    setHTML(container, '<div class="no-data-msg">Loading curves and comparison reports...</div>');
     
     try {
         const response = await fetch('/api/metrics');
         const data = await response.json();
         
-        container.innerHTML = '';
+        setHTML(container, '');
         
         const images = data.images;
         if (Object.keys(images).length === 0) {
-            container.innerHTML = '<div class="no-data-msg">No curves generated in outputs. Complete training or run comparison modes to generate charts.</div>';
+            setHTML(container, '<div class="no-data-msg">No curves generated in outputs. Complete training or run comparison modes to generate charts.</div>');
             return;
         }
         
@@ -782,14 +793,14 @@ async function loadEvaluationMetrics() {
         for (const [key, base64Str] of Object.entries(images)) {
             const card = document.createElement('div');
             card.className = 'glass-card rendered-plot-card';
-            card.innerHTML = `
+            setHTML(card, `
                 <div class="card-title" style="border-bottom:none; margin-bottom:10px;">${plotTitles[key] || key}</div>
                 <img src="${base64Str}" alt="${key}">
-            `;
+            `);
             container.appendChild(card);
         }
     } catch (e) {
         console.error("Evaluation load error:", e);
-        container.innerHTML = '<div class="no-data-msg" style="color:var(--accent-red)">Error loading metrics data.</div>';
+        setHTML(container, '<div class="no-data-msg" style="color:var(--accent-red)">Error loading metrics data.</div>');
     }
 }
