@@ -958,3 +958,20 @@ body {
     text-align: center;
     padding: 40px 0;
 }
+
+/* Keep research controls reachable on narrow screens. */
+@media (max-width: 760px) {
+    body { height: auto; min-height: 100vh; overflow: auto; }
+    .app-container { flex-direction: column; height: auto; min-height: 100vh; }
+    .sidebar { width: 100%; padding: 16px; border-right: 0; border-bottom: 1px solid var(--border-color); }
+    .brand { margin-bottom: 16px; }
+    .nav-links { flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+    .nav-links li { flex-shrink: 0; }
+    .nav-item { white-space: nowrap; }
+    .sidebar-footer { display: none; }
+    .main-content { height: auto; min-width: 0; overflow: visible; }
+    .top-bar { padding: 12px 16px; height: auto; flex-wrap: wrap; gap: 12px; }
+    .tab-panel { padding: 16px; overflow: visible; }
+    .grid-2, .grid-3, .grid-sidebar-layout, .grid-main-control, .rendered-plots-grid { grid-template-columns: minmax(0, 1fr); }
+    .glass-card { min-width: 0; padding: 16px; overflow-wrap: anywhere; }
+}

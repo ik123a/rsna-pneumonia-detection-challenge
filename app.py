@@ -25,7 +25,7 @@ import model as detection_model
 from data_preparation import prepare_data
 
 # Initialize FastAPI app
-app = FastAPI(title="RSNA Pneumonia Detection Clinical Dashboard")
+app = FastAPI(title="RSNA Pneumonia Detection Research Dashboard")
 
 # Enable CORS for development flexibility
 app.add_middleware(
@@ -74,8 +74,9 @@ def get_inference_model():
             
         checkpoint_path = config.MODEL_SAVE_PATH
         if not os.path.exists(checkpoint_path):
-            print(f"Checkpoint not found at {checkpoint_path}. Creating model with default weights.")
-            model = detection_model.get_model(num_classes=2, pretrained=True, model_type='fasterrcnn')
+            raise FileNotFoundError(
+                f"Trained checkpoint required for inference: {checkpoint_path}"
+            )
         else:
             print(f"Loading model from checkpoint: {checkpoint_path}")
             model = detection_model.get_model(num_classes=2, pretrained=False, model_type='fasterrcnn')
