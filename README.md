@@ -1,222 +1,69 @@
-<p align="center">
-  <img src="docs/sample_xrays.png" alt="RSNA Pneumonia Detection" width="700">
-</p>
+# RSNA pneumonia-region detection experiment
 
-<h1 align="center">RSNA Pneumonia Detection — Faster R-CNN</h1>
+An educational object-detection project for the RSNA Pneumonia Detection Challenge. It contains DICOM/CSV preprocessing, torchvision Faster R-CNN model factories, training, evaluation, visualization and a FastAPI research dashboard.
 
-<p align="center">
-  <em>An end-to-end object detection pipeline for automated pneumonia region localization in chest X-rays</em>
-</p>
+This is an experimental research application. It has no established clinical validity and must not be used to diagnose, triage or guide treatment. A generic COCO initialization with a newly replaced classification head is not a trained pneumonia detector.
 
-<p align="center">
-  <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-2.x-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch"></a>
-  <a href="https://pytorch.org/vision/"><img src="https://img.shields.io/badge/Torchvision-0.15+-263238?style=for-the-badge&logo=pytorch&logoColor=white" alt="Torchvision"></a>
-  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-0.95+-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License: MIT"></a>
-</p>
+## Source pipeline
 
----
-
-## Overview
-
-This project implements a production-ready pneumonia detection system using **Faster R-CNN with a ResNet-50-FPN backbone**, built for the [RSNA Pneumonia Detection Challenge](https://www.kaggle.com/c/rsna-pneumonia-detection-challenge). It includes a complete training pipeline, evaluation suite, and an interactive **clinical web dashboard** for real-time inference.
-
-### Key Capabilities
-
-| Feature | Description |
-|---------|-------------|
-| **Transfer Learning** | COCO-pretrained ResNet-50-FPN backbone for robust medical feature extraction |
-| **Custom Medical Anchors** | RPN tuned with anchor sizes `(32, 64, 128, 256, 512)` and aspect ratios `(0.5, 1.0, 2.0)` optimized for chest X-ray lung lesions |
-| **Data Augmentation** | Horizontal flipping, brightness jittering, and affine transformations to prevent overfitting |
-| **Mixed Precision Training** | AMP (`torch.cuda.amp`) for 2× faster training and 50% lower VRAM usage |
-| **GPU Optimization** | CUDNN auto-benchmarking, non-blocking transfers, persistent workers, prefetch optimization |
-| **Advanced Schedulers** | AdamW + ReduceLROnPlateau with early stopping |
-| **Full Evaluation Suite** | IoU, AP@0.5, mAP, F1-score, precision-recall curves |
-| **Web Dashboard** | FastAPI-powered interactive clinical UI with drag-and-drop inference |
-
----
-
-## Results
-
-### Baseline vs. Improved Model
-
-The improved model (COCO pretraining + custom medical anchors + augmentation + LR scheduling) significantly outperforms the baseline across all metrics:
-
-| Metric | Baseline | Improved | Δ |
-|--------|----------|----------|---|
-| **Mean IoU** | 0.2452 | **0.5842** | +138.3% |
-| **AP @ IoU=0.5** | 0.1221 | **0.4568** | +274.0% |
-| **mAP @ IoU=0.5** | 0.1221 | **0.4568** | +274.0% |
-| **F1-Score** | 0.1842 | **0.5125** | +178.2% |
-
-<details>
-<summary><strong>📊 Performance Visualizations</strong> (click to expand)</summary>
-
-#### Model Comparison
-![Comparison](docs/comparison.png)
-
-#### Precision-Recall Curve
-![PR Curve](docs/precision_recall.png)
-
-#### Bounding Box Predictions
-Magenta = model predictions · Green dashed = ground truth annotations
-![Predictions](docs/predictions.png)
-
-#### Training Loss
-![Training Loss](docs/training_loss.png)
-
-#### IoU Distribution
-![IoU Distribution](docs/iou_distribution.png)
-
-</details>
-
----
-
-## Project Structure
-
-```
-├── main.py                   # CLI entry point — train, evaluate, compare, visualize
-├── config.py                 # Hyperparameters and path configuration
-├── model.py                  # Faster R-CNN model with custom medical anchors
-├── data_preparation.py       # DICOM dataset loading, preprocessing, splitting
-├── augmentation.py           # Data augmentation pipeline
-├── train.py                  # GPU-optimized training loop (AMP, gradient scaling)
-├── evaluate.py               # IoU, AP, mAP, F1-score computation
-├── visualize.py              # Prediction visualization and plot generation
-│
-├── app.py                    # FastAPI clinical dashboard backend
-├── static/                   # Web frontend (HTML/CSS/JS)
-│   ├── index.html
-│   ├── css/styles.css
-│   └── js/app.js
-│
-├── scripts/                  # Utility scripts
-│   └── take_screenshots.js   # Puppeteer screenshot automation
-│
-├── docs/                     # Documentation images and plots
-├── output/                   # Training outputs (checkpoints, metrics, plots)
-├── requirements.txt          # Python dependencies
-└── .gitignore
+```mermaid
+flowchart LR
+  D[Authorized local DICOM files] --> P[data_preparation.py]
+  C[Local annotation CSV] --> P
+  P --> T[train.py / main.py]
+  M[model.py - Faster R-CNN] --> T
+  T --> K[Local checkpoint]
+  K --> E[evaluate.py and visualize.py]
+  K --> A[app.py research API]
+  U[Local image upload] --> A
+  A --> B[static dashboard]
 ```
 
----
+This diagram contains no patient images and does not imply a successfully trained model.
 
-## Installation
+## Components and limitations
 
-### Prerequisites
-- Python 3.8+
-- CUDA-compatible GPU (recommended: 6 GB+ VRAM)
-- [PyTorch with CUDA support](https://pytorch.org/get-started/locally/)
+- `data_preparation.py` groups boxes by patient, rescales images/targets and builds train/validation loaders. Missing DICOM files currently become blank images; verify data completeness before any experiment.
+- `model.py` builds ResNet50-FPN Faster R-CNN and replaces the prediction head for two classes. The optional custom-anchor path currently defines one feature-level anchor configuration for an FPN model and needs runtime validation before use.
+- `train.py` provides training/validation loops, optimizer/scheduler choices and checkpoint handling. AMP and GPU features depend on a compatible PyTorch/CUDA stack.
+- `evaluate.py` implements IoU, matching and an 11-point interpolated AP calculation. Do not assume it reproduces the challenge's official scoring protocol.
+- `app.py` serves upload inference, dataset browsing, diagnostics, background training and metrics. It is a local research interface with no authentication. Treat uploads, checkpoint files and returned DICOM metadata as sensitive.
 
-### Setup
+Previous benchmark comparisons, speed/memory percentages and production/clinical claims were not reproduced and have been removed. Existing `output/` metrics and `docs/` plots have not been traced to a reproducible run or dataset split. They are historical artifacts, not audited performance evidence. Patient-containing figures are not embedded or republished here. No new license grant is made by this README.
 
-```bash
-# Clone the repository
-git clone https://github.com/ik123a/rsna-pneumonia-detection-challenge.git
-cd rsna-pneumonia-detection-challenge
+## Setup
 
-# Create a virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate     # Windows
+Use a fresh Python environment and a compatible torch/torchvision pair. Review `requirements.txt` before installing:
 
-# Install dependencies
-pip install -r requirements.txt
+```sh
+python -m pip install -r requirements.txt
 ```
 
-### Dataset
+Obtain the challenge dataset yourself under its applicable terms; this repository does not redistribute it. `config.py` expects `stage_2_train_images/`, `stage_2_test_images/`, `stage_2_train_labels.csv` and `stage_2_detailed_class_info.csv` relative to the working directory. Keep dataset files and trained checkpoints outside version control.
 
-Download the RSNA Pneumonia Detection Challenge dataset from [Kaggle](https://www.kaggle.com/c/rsna-pneumonia-detection-challenge/data) and place the files in the project root:
+The CLI entry point is `main.py --mode train|evaluate|compare|visualize`; run `python main.py --help` after dependencies are installed. Training can be expensive and pretrained initialization can download weights. `--no_pretrained` avoids requesting pretrained detector/backbone weights. Evaluation expects a compatible trusted checkpoint via `--checkpoint`.
 
-```
-stage_2_train_images/         # Training DICOM images
-stage_2_test_images/          # Test DICOM images
-stage_2_train_labels.csv      # Bounding box annotations
-stage_2_detailed_class_info.csv
-```
+For a local research dashboard:
 
----
-
-## Usage
-
-### Command-Line Pipeline
-
-```bash
-# Train the model (20 epochs, with augmentation)
-python main.py --mode train --epochs 20 --augmentation
-
-# Evaluate a trained checkpoint
-python main.py --mode evaluate --checkpoint output/best_model.pth
-
-# Run baseline vs. improved comparison
-python main.py --mode compare --epochs 5
-
-# Visualize model predictions
-python main.py --mode visualize --checkpoint output/best_model.pth
+```sh
+python -m uvicorn app:app --host 127.0.0.1 --port 5000
 ```
 
-### Web Dashboard
+Start from the repository root so `static/` resolves. Inference requires `config.MODEL_SAVE_PATH` (`output/best_model.pth`). Missing checkpoints now fail explicitly instead of producing predictions from a newly initialized head. Only load checkpoints you trust. Do not expose training/upload endpoints to a shared network.
 
-Launch the interactive clinical dashboard:
+## Offline checks — 2026-11-09
 
-```bash
-python app.py
+```sh
+python -m unittest discover -s tests -v
+python -m compileall -q app.py model.py train.py main.py evaluate.py data_preparation.py augmentation.py visualize.py config.py
 ```
 
-This starts the FastAPI server at `http://127.0.0.1:5000/` and opens the dashboard automatically.
+Two loader/factory regressions pass after being observed failing before repair. They execute the real function bodies with dependency fakes to verify that missing checkpoints never construct a model and that `pretrained=False` explicitly disables backbone downloads. Syntax compilation passes for the listed modules. These checks establish neither detector accuracy nor a working inference/training run.
 
-<details>
-<summary><strong>🖥️ Dashboard Screenshots</strong> (click to expand)</summary>
+The FastAPI server started on loopback with an isolated `pydicom 3.0.2` install. `/api/health` returned 200; diagnostics reported CPU, zero dataset images/annotations and no checkpoint. Browser checks confirmed CPU diagnostics and the empty case list. The browser exposed three malformed `setHTML` calls that prevented all dashboard JavaScript from parsing; these were repaired, and `node --check static/js/app.js` now passes. A narrow-screen sidebar overflow was reproduced and repaired; at 390px the browser confirms no horizontal document overflow.
 
-#### System Overview & Diagnostics
-![Overview](docs/overview_tab.png)
+![Actual empty-data research dashboard on desktop](docs/audit/research-ui-desktop.png)
 
-#### Diagnostic Tool — Single Patient Inference
-![Inference](docs/inference_tab.png)
+![Actual empty-data research dashboard at 390px](docs/audit/research-ui-mobile.png)
 
-#### Database Validation Browser
-![Browser](docs/browser_tab.png)
-
-#### Training Monitor
-![Training](docs/training_tab.png)
-
-#### Model Evaluation & Metrics
-![Evaluation](docs/evaluation_tab.png)
-
-</details>
-
-**Dashboard Features:**
-- **System Overview** — GPU/CPU diagnostics, VRAM utilization, model metadata
-- **Diagnostic Tool** — Drag-and-drop DICOM/PNG inference with confidence threshold controls
-- **Database Browser** — Browse validation cases, compare predictions vs. ground truth
-- **Training Monitor** — Configure hyperparameters and watch training curves in real-time
-- **Evaluation** — View baseline vs. improved performance metrics and curves
-
----
-
-## Architecture
-
-```
-Input (Chest X-Ray DICOM)
-  └──► Data Preparation (DICOM → Tensor, Normalization, Augmentation)
-        └──► Faster R-CNN
-              ├── Backbone: ResNet-50-FPN (COCO pretrained)
-              ├── RPN: Custom medical anchors (32–512px)
-              └── Detection Head: Class + BBox regression
-                    └──► Post-Processing (NMS, Confidence Filter)
-                          └──► Output: Bounding boxes + Confidence scores
-```
-
----
-
-## Acknowledgements
-
-- [RSNA Pneumonia Detection Challenge](https://www.kaggle.com/c/rsna-pneumonia-detection-challenge) for the annotated DICOM chest X-ray dataset
-- [NIH Clinical Center](https://www.nih.gov/about-nih/what-we-do/nih-almanac/national-institutes-health-nih) for making clinical imaging data available for research
-- [PyTorch](https://pytorch.org/) and [Torchvision](https://pytorch.org/vision/) for the deep learning framework and pretrained models
-
----
-
-## License
-
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+These are actual local UI captures, with external CDN requests blocked and no patient content. Font icons are consequently absent and the Chart.js-dependent training chart is unavailable (`Chart is not defined` in the blocked-CDN run). The frontend still labels backend health as �Model Backend: Online�; this means the web service responded, not that a checkpoint is loaded. Model-configuration labels are static UI text. No authorized dataset/checkpoint was loaded, and no inference, training, weights download or GPU benchmark was run. Runtime detector correctness remains unverified.

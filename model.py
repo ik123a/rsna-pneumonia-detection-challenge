@@ -29,6 +29,7 @@ def get_faster_rcnn_model(num_classes=2, pretrained=True, trainable_backbone_lay
     weights = torchvision.models.detection.FasterRCNN_ResNet50_FPN_Weights.DEFAULT if pretrained else None
     model = fasterrcnn_resnet50_fpn(
         weights=weights,
+        weights_backbone=None,  # Full detector weights supply the backbone when requested.
         trainable_backbone_layers=trainable_backbone_layers
     )
 
@@ -73,6 +74,7 @@ def get_faster_rcnn_custom(num_classes=2, pretrained=True):
 
     model = fasterrcnn_resnet50_fpn(
         weights=weights,
+        weights_backbone=None,  # Full detector weights supply the backbone when requested.
         rpn_anchor_generator=anchor_generator,
         box_detections_per_img=10,
         box_score_thresh=0.05,

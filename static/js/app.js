@@ -362,7 +362,7 @@ function initBrowser() {
 
 async function loadBrowserSamples() {
     const container = document.getElementById('sample-list-container');
-    setHTML(container, '<p style="color:var(--text-muted)); font-size:0.85rem; padding:10px;">Loading list...</p>';
+    setHTML(container, '<p style="color:var(--text-muted); font-size:0.85rem; padding:10px;">Loading list...</p>');
     
     const filterVal = document.getElementById('browser-filter').value;
     let url = '/api/samples?limit=100';
@@ -375,7 +375,7 @@ async function loadBrowserSamples() {
         
         setHTML(container, '');
         if (data.length === 0) {
-            setHTML(container, '<p style="color:var(--text-muted)); font-size:0.85rem; padding:10px;">No cases found.</p>';
+            setHTML(container, '<p style="color:var(--text-muted); font-size:0.85rem; padding:10px;">No cases found.</p>');
             return;
         }
         
@@ -396,7 +396,7 @@ async function loadBrowserSamples() {
         
     } catch (e) {
         console.error("List load error:", e);
-        setHTML(container, '<p style="color:var(--accent-red)); font-size:0.85rem; padding:10px;">Load error.</p>';
+        setHTML(container, '<p style="color:var(--accent-red); font-size:0.85rem; padding:10px;">Load error.</p>');
     }
 }
 
